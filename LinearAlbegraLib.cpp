@@ -1,191 +1,319 @@
 #include <iostream>
-#include <vector>
+#include <unordered_map>
+#include <string>
 #include <cmath>
 #include <limits>
+#include <type_traits>
+#include <sstream>
+#include <iomanip>
+
 using namespace std;
+
+// Global 2D int array
+int res[4][8] = {1};
+
+template <typename T1, typename T2>
+class Pair
+{
+public:
+    // Default constructor
+    Pair() : first(), second() {}
+
+    // Parameterized constructor
+    Pair(const T1 &f, const T2 &s) : first(f), second(s) {}
+
+    // Copy constructor
+    Pair(const Pair &other) : first(other.first), second(other.second) {}
+
+    // Destructor (default)
+    ~Pair() = default;
+
+    // Getter for first element
+    T1 getFirst() const
+    {
+        return first;
+    }
+
+    // Setter for first element
+    void setFirst(const T1 &f)
+    {
+        first = f;
+    }
+
+    // Getter for second element
+    T2 getSecond() const
+    {
+        return second;
+    }
+
+    // Setter for second element
+    void setSecond(const T2 &s)
+    {
+        second = s;
+    }
+
+private:
+    T1 first;
+    T2 second;
+};
+
+template <typename T>
+class Vector
+{
+private:
+    T *data;
+    size_t capacity;
+    size_t size;
+
+public:
+    Vector();
+    Vector(size_t initialSize);
+    Vector(const Vector &other);
+    ~Vector();
+    Vector &operator=(const Vector &other);
+    size_t Size() const;
+    size_t Capacity() const;
+    void PushBack(const T &value);
+    T &operator[](size_t index);
+    const T &operator[](size_t index) const;
+    class iterator
+    {
+    private:
+        T *ptr;
+
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = T;
+        using pointer = T *;
+        using reference = T &;
+
+        iterator(pointer p) : ptr(p) {}
+
+        reference operator*() const { return *ptr; }
+        pointer operator->() { return ptr; }
+
+        // Pre-increment
+        iterator &operator++()
+        {
+            ++ptr;
+            return *this;
+        }
+
+        // Post-increment
+        iterator operator++(int)
+        {
+            iterator temp = *this;
+            ++ptr;
+            return temp;
+        }
+
+        bool operator==(const iterator &other) const { return ptr == other.ptr; }
+        bool operator!=(const iterator &other) const { return ptr != other.ptr; }
+    };
+
+    iterator begin() { return iterator(data); }
+    iterator end() { return iterator(data + size); }
+};
+
+template <typename T>
+Vector<T>::Vector() : data(nullptr), capacity(0), size(0) {}
+template <typename T>
+Vector<T>::Vector(size_t initialSize) : data(nullptr), capacity(initialSize), size(initialSize)
+{
+    data = new T[capacity];
+}
+template <typename T>
+Vector<T>::Vector(const Vector &other) : capacity(other.capacity), size(other.size)
+{
+    data = new T[capacity];
+    for (size_t i = 0; i < size; ++i)
+    {
+        data[i] = other.data[i];
+    }
+}
+
+template <typename T>
+Vector<T>::~Vector()
+{
+    delete[] data;
+}
+
+template <typename T>
+Vector<T> &Vector<T>::operator=(const Vector &other)
+{
+    if (this != &other)
+    {
+        delete[] data;
+        capacity = other.capacity;
+        size = other.size;
+        data = new T[capacity];
+        for (size_t i = 0; i < size; ++i)
+        {
+            data[i] = other.data[i];
+        }
+    }
+    return *this;
+}
+
+template <typename T>
+size_t Vector<T>::Size() const
+{
+    return size;
+}
+
+template <typename T>
+size_t Vector<T>::Capacity() const
+{
+    return capacity;
+}
+
+template <typename T>
+void Vector<T>::PushBack(const T &value)
+{
+    if (size == capacity)
+    {
+        capacity = (capacity == 0) ? 1 : capacity * 2;
+        T *newData = new T[capacity];
+        for (size_t i = 0; i < size; ++i)
+        {
+            newData[i] = data[i];
+        }
+        delete[] data;
+        data = newData;
+    }
+    data[size++] = value;
+}
+
+template <typename T>
+T &Vector<T>::operator[](size_t index)
+{
+    return data[index];
+}
+
+template <typename T>
+const T &Vector<T>::operator[](size_t index) const
+{
+    return data[index];
+}
 
 template <typename T>
 struct Matrix
 {
+    static_assert(std::is_arithmetic<T>::value, "Matrix type must be arithmetic.");
+
     int rows;
     int cols;
-    vector<T> data;
+    string name;
+    Vector<T> data;
+
     template <typename U>
     friend void displayMatrix(Matrix<U> &matrix);
-    // Constructor with input validation
-    Matrix(int r, int c) : rows(r), cols(c)
+
+    template <typename U>
+    friend Matrix<U> createMatrix();
+
+    Matrix() : rows(0), cols(0), name("Matrix0") {}
+
+    Matrix(int r, int c, const string &n) : rows(r), cols(c), name(n), data(r * c)
     {
         if (r <= 0 || c <= 0)
         {
             throw invalid_argument("Matrix dimensions must be positive.");
         }
-        data.resize(r * c); // Allocate memory for data
     }
 
-    // Function to get element at a specific row and column
-T& get(int i, int j) {
-  if (i < 0 || i >= rows || j < 0 || j >= cols) {
-    throw out_of_range("Index out of bounds for matrix access.");
-  }
-  // Return a reference to the element, allowing modification
-  return data[i * cols + j];
+    T &get(int i, int j);
+    void set(int i, int j, const T &value);
+    void takeInput();
+
+    template <typename K>
+    static T determinant2x2(Matrix<K> &matrix);
+};
+
+template <typename T>
+unordered_map<string, Matrix<T>> matrices;
+
+template <typename T>
+unordered_map<string, Matrix<T>> &getMatrices()
+{
+    return matrices<T>;
 }
 
-    // Function to set element at a specific row and column
-    void set(int i, int j, const T &value)
+template <typename T>
+T &Matrix<T>::get(int i, int j)
+{
+    if (i < 0 || i >= rows || j < 0 || j >= cols)
     {
-        get(i, j) = value;
+        throw out_of_range("Index out of bounds for matrix access.");
     }
+    return data[i * cols + j];
+}
 
-    // Function to take input values from the user
-   void takeInput() {
+template <typename T>
+void Matrix<T>::set(int i, int j, const T &value)
+{
+    get(i, j) = value;
+}
+
+template <typename T>
+void Matrix<T>::takeInput()
+{
     cout << "Enter elements for the matrix:" << endl;
 
-    for (int i = 0; i < rows; ++i) {
-        for (int j = 0; j < cols; ++j) {
-            while (!(cin >> data[i * cols + j])) {
-                // Clear the error state from cin
+    for (int i = 0; i < rows; ++i)
+    {
+        for (int j = 0; j < cols; ++j)
+        {
+            while (!(cin >> data[i * cols + j]))
+            {
                 cin.clear();
-                cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Discard invalid input
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
                 cout << "Invalid input. Please enter a number: ";
             }
         }
     }
 }
 
-    template <typename K>
-    static T determinant2x2(Matrix<K> &matrix)
-    {
-        return matrix.get(0, 0) * matrix.get(1, 1) - matrix.get(0, 1) * matrix.get(1, 0);
-    }
-};
-
-// Function to create a matrix of user-specified type and dimensions
-#include <iostream>
-#include <limits>
-
 template <typename T>
-Matrix<T> createMatrix() {
-    int rows, cols;
-
-    while (true) {
-        cout << "Enter the number of rows and columns for the matrix:" << endl;
-        cout << "Rows:";
-
-        if (!(cin >> rows)) {
-            // Clear the input stream
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "Invalid input. Please enter a positive integer for rows." << endl;
-            continue;
-        }
-
-        if (rows <= 0) {
-            cout << "Invalid input. Please enter a positive integer for rows." << endl;
-            continue;
-        }
-
-        cout << "Cols:";
-
-        if (!(cin >> cols)) {
-            // Clear the input stream
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "Invalid input. Please enter a positive integer for columns." << endl;
-            continue;
-        }
-
-        if (cols <= 0) {
-            cout << "Invalid input. Please enter a positive integer for columns." << endl;
-            continue;
-        }
-
-        break; // Exit the loop if valid input is received
-    }
-
-    Matrix<T> matrix(rows, cols);
-    matrix.takeInput();
-    cout << "The Inputed Matrix is:" << endl;
-    displayMatrix(matrix);
+Matrix<T> addMatrices(Matrix<T> &matrix)
+{
     return matrix;
 }
 
-template <typename T>
-void displayMatrix(Matrix<T> &matrix)
+template <typename T, typename... Matrices>
+Matrix<T> addMatrices(Matrix<T> &matrix, Matrix<T> &nextMatrix, Matrices &...matrices)
 {
-    // Print top border
-    for (int j = 0; j < matrix.cols; ++j)
-    {
-        cout << "+---";
-    }
-    cout << "+" << endl;
+    Matrix<T> temp = addTwoMatrices(matrix, nextMatrix);
+    return addMatrices(temp, matrices...);
+}
 
-    // Print each row with elements and separators
-    for (int i = 0; i < matrix.rows; ++i)
-    {
-        cout << "| ";
-        for (int j = 0; j < matrix.cols; ++j)
-        {
-            cout << matrix.get(i, j) << " | ";
-        }
-        cout << endl;
+template <typename T>
+Matrix<T> addTwoMatrices(Matrix<T> &mat1, Matrix<T> &mat2)
+{
+    // Create a result matrix with the same dimensions as the input matrices
+    Matrix<T> result(mat1.rows, mat1.cols, "temp");
+    initializeToZero(result);
 
-        // Print separator for each row (except the last)
-        if (i < matrix.rows - 1)
+    // Perform addition element-wise
+    for (int i = 0; i < mat1.rows; ++i)
+    {
+        for (int j = 0; j < mat1.cols; ++j)
         {
-            for (int j = 0; j < matrix.cols; ++j)
-            {
-                cout << "+---";
-            }
-            cout << "+" << endl;
+            result.set(i, j, mat1.get(i, j) + mat2.get(i, j));
         }
     }
 
-    // Print bottom border
-    for (int j = 0; j < matrix.cols; ++j)
-    {
-        cout << "+---";
-    }
-    cout << "+" << endl;
+    return result;
 }
 
 template <typename T>
-bool isColumnVector(const Matrix<T>& matrix) {
-  return matrix.cols == 1;
+template <typename K>
+T Matrix<T>::determinant2x2(Matrix<K> &matrix)
+{
+    return matrix.get(0, 0) * matrix.get(1, 1) - matrix.get(0, 1) * matrix.get(1, 0);
 }
-
-
-template <typename T>
-T norm(Matrix<T>& matrix) {
-  if (!isColumnVector(matrix)) {
-    throw invalid_argument("norm function is only defined for column vectors");
-  }
-
-  T sum = 0;
-  for (int i = 0; i < matrix.rows; ++i) {
-    auto x = matrix.get(i,0);
-    sum += (x * x); // Square each element and add to the sum
-  }
-
-  return sqrt(sum); // Return the square root of the sum (Euclidean norm)
-}
-
-template <typename T>
-T vectorDotProduct(Matrix<T>& matrix1,Matrix<T>& matrix2) {
-  if (matrix1.rows != matrix2.rows) {
-    throw invalid_argument("Matrices must have the same number of rows for dot product");
-  }
-
-  T product = 0;
-  for (int i = 0; i < matrix1.rows; ++i) {
-    auto x = matrix1.get(i,0);
-    product += x*x; // Multiply corresponding elements and add to the product
-  }
-
-  return product;
-}
-
-// Function to calculate the trace of a matrix
+// Unanry Operations
 template <typename T>
 void matrixTrace(Matrix<T> &matrix)
 {
@@ -207,38 +335,50 @@ void matrixTrace(Matrix<T> &matrix)
     cout << "Trace of the matrix: " << sum << endl;
 }
 
-// Function to calculate the mean of each column and store them in an array
 template <typename T>
 void calculateColumnMeans(Matrix<T> &matrix)
 {
     // Create a 1xcols matrix to store column means
-    Matrix<double> means(1, matrix.cols);
+    std::ostringstream oss;
+    res[0][1]++;
+    oss << "Mean" << res[0][1];
+    string meanname = oss.str();
+
+    Matrix<double> means(1, matrix.cols, meanname); // Using double for more accurate mean calculation
+
+    // Initialize means matrix to zeros
+    for (int j = 0; j < matrix.cols; ++j)
+    {
+        means.get(0, j) = 0.0;
+    }
 
     // Calculate sum of each column
     for (int i = 0; i < matrix.rows; ++i)
     {
         for (int j = 0; j < matrix.cols; ++j)
         {
-            means.get(0, j) += matrix.get(i, j); // Access element in means matrix
+            means.get(0, j) += static_cast<double>(matrix.get(i, j)); // Cast to double for floating-point addition
         }
     }
 
     // Calculate average for each column
     for (int j = 0; j < matrix.cols; ++j)
     {
-        means.get(0, j) /= matrix.rows;
+        means.get(0, j) /= static_cast<double>(matrix.rows); // Cast to double for floating-point division
     }
 
-    cout << "Means of each column in the matrix:" << endl;
+    getMatrices<T>()[means.name] = means;
+    cout << "Means of each column in the matrix: " << matrix.name << "(" << means.name << ")" << endl; // Assuming matrix has a name member
     displayMatrix(means);
 }
-
-// Function to find the transpose of a matrix
 template <typename T>
 void transpose(Matrix<T> &matrix)
 {
-    // Create a new matrix with swapped dimensions (rows become columns and vice versa)
-    Matrix<T> transposed(matrix.cols, matrix.rows);
+    std::ostringstream oss;
+    res[0][2]++;
+    oss << "Transpose" << res[0][2];
+    string resname = oss.str();
+    Matrix<T> transposed(matrix.cols, matrix.rows, resname);
     // Fill the transposed matrix by swapping elements
     for (int i = 0; i < matrix.rows; ++i)
     {
@@ -248,131 +388,53 @@ void transpose(Matrix<T> &matrix)
         }
     }
 
-    cout << "The Transpose of the given Matrix is:" << endl;
+    getMatrices<T>()[transposed.name] = transposed;
+    cout << "Transpose of the matrix: " << matrix.name << "(" << transposed.name << ")" << endl; // Assuming matrix has a name member
     displayMatrix(transposed);
 }
 
-// Custom implementation of magnitude function for doubles
+// Lambda template for magnitude
 template <typename T>
-T magnitude(const T &value)
+auto magnitude = [](T val)
 {
-    return value >= 0 ? value : -value;
-}
+    return std::abs(val);
+};
 
-// Custom implementation of row_swap function
-template <typename T>
-void row_swap(T &a, T &b)
+template <>
+auto magnitude<float> = [](float val)
 {
-    T temp = a;
-    a = b;
-    b = temp;
-}// Function to calculate the inverse of a matrix
+    return std::fabs(val);
+};
+
+template <>
+auto magnitude<double> = [](double val)
+{
+    return std::fabs(val);
+};
 template <typename T>
-Matrix<T> matrixInverse(Matrix<T>& matrix) {
-  // Check if the matrix is square
-  if (matrix.rows != matrix.cols) {
-    throw invalid_argument("Matrix inverse is only defined for square matrices.");
-  }
-
-  int n = matrix.rows;
-
-  // Check if the matrix is singular by calculating its determinant
-  auto det = determinant(matrix);
-  if (det == 0) {
-    throw invalid_argument("The input matrix is singular, and its inverse does not exist.");
-  }
-
-  // Perform LU decomposition of the matrix
-  pair<Matrix<T>, Matrix<T>> lu = luDecomposition(matrix);
-  Matrix<T> L = lu.first;
-  Matrix<T> U = lu.second;
-
-  // Create an identity matrix with the same dimensions as the input matrix
-  Matrix<T> identity(n, n);
-  for (int i = 0; i < n; ++i) {
-    identity.set(i, i, 1);
-  }
-
-  // Solve the system of equations L * y = identity for each column of the identity matrix
-  // This gives us the columns of the inverse matrix
-  Matrix<T> inverse(n, n);
-  for (int j = 0; j < n; ++j) {
-    Matrix<T> y(n, 1); // Create a column vector to store the solution
-
-    // Forward substitution
-    for (int i = 0; i < n; ++i) {
-      T sum = 0;
-      // Check for division by zero in U.get(i, i) before division
-      if (abs(U.get(i, i)) < std::numeric_limits<T>::epsilon()) {
-        throw invalid_argument("Matrix is nearly singular, inverse calculation may be inaccurate.");
-      }
-      for (int k = 0; k < i; ++k) {
-        sum += L.get(i, k) * y.get(k, 0);
-      }
-      y.set(i, 0, identity.get(i, j) - sum);
+T norm(Matrix<T> &vec)
+{
+    T sum = 0;
+    for (int i = 0; i < vec.rows; ++i)
+    {
+        sum += vec.get(i, 0) * vec.get(i, 0);
     }
-
-    // Backward substitution
-    for (int i = n - 1; i >= 0; --i) {
-      T sum = 0;
-      // Check for division by zero in U.get(i, i) before division
-      if (abs(U.get(i, i)) < std::numeric_limits<T>::epsilon()) {
-        throw invalid_argument("Matrix is nearly singular, inverse calculation may be inaccurate.");
-      }
-      for (int k = i + 1; k < n; ++k) {
-        sum += U.get(i, k) * inverse.get(k, j);
-      }
-      inverse.set(i, j, (y.get(i, 0) - sum) / U.get(i, i));
-    }
-  }
-
-  return inverse;
+    return std::sqrt(sum);
 }
-
-
-// Function to perform LU decomposition of a matrix
 template <typename T>
-pair<Matrix<T>, Matrix<T>> luDecomposition(Matrix<T>& matrix) {
-    // Check if the matrix is square
-    if (matrix.rows != matrix.cols) {
-        throw invalid_argument("LU decomposition is only defined for square matrices.");
+T vectorDotProduct(Matrix<T> &vec1, Matrix<T> &vec2)
+{
+    if (vec1.rows != vec2.rows)
+    {
+        throw std::invalid_argument("Vector dimensions must match for dot product.");
     }
-
-    // Create matrices for L and U with the same dimensions as the input matrix
-    int n = matrix.rows;
-    Matrix<T> lower(n, n);
-    Matrix<T> upper(n, n);
-
-    // Decomposing matrix into Upper and Lower triangular matrix
-    for (int i = 0; i < n; ++i) {
-        // Upper Triangular
-        for (int k = i; k < n; ++k) {
-            T sum = 0.0;
-            for (int j = 0; j < i; ++j) {
-                sum += lower.get(i, j) * upper.get(j, k);
-            }
-            upper.set(i, k, matrix.get(i, k) - sum);
-        }
-
-        // Lower Triangular
-        for (int k = i; k < n; ++k) {
-            if (i == k) {
-                lower.set(i, i, 1.0);  // Diagonal as 1
-            } else {
-                T sum = 0.0;
-                for (int j = 0; j < i; ++j) {
-                    sum += lower.get(k, j) * upper.get(j, i);
-                }
-                lower.set(k, i, (matrix.get(k, i) - sum) / upper.get(i, i));
-            }
-        }
+    T result = 0;
+    for (int i = 0; i < vec1.rows; ++i)
+    {
+        result += vec1.get(i, 0) * vec2.get(i, 0);
     }
-
-    return pair<Matrix<T>, Matrix<T>>(lower, upper);
+    return result;
 }
-
-// Function to perform LU decomposition
-
 template <typename T>
 int matrixRank(Matrix<T> &matrix)
 {
@@ -381,7 +443,7 @@ int matrixRank(Matrix<T> &matrix)
     int rank = 0;
     int n = temp.rows;
     int m = temp.cols;
-    int x = n<m?n:m;
+    int x = n < m ? n : m;
     for (int col = 0; col < x; ++col)
     {
         int pivotRow = col;
@@ -389,14 +451,14 @@ int matrixRank(Matrix<T> &matrix)
         // Find the pivot element (largest element in magnitude in the current column below the diagonal)
         for (int i = col + 1; i < n; ++i)
         {
-            if (magnitude(temp.get(i, col)) > magnitude(temp.get(pivotRow, col)))
+            if (magnitude<T>(temp.get(i, col)) > magnitude<T>(temp.get(pivotRow, col)))
             {
                 pivotRow = i;
             }
         }
 
         // If the pivot element is zero, the column is linearly dependent and the rank doesn't increase
-        if (magnitude(temp.get(pivotRow, col)) == 0)
+        if (magnitude<T>(temp.get(pivotRow, col)) == 0)
         {
             continue;
         }
@@ -406,7 +468,7 @@ int matrixRank(Matrix<T> &matrix)
         {
             for (int j = 0; j < m; ++j)
             {
-                row_swap(temp.get(col, j), temp.get(pivotRow, j));
+                std::swap(temp.get(col, j), temp.get(pivotRow, j));
             }
         }
 
@@ -425,62 +487,67 @@ int matrixRank(Matrix<T> &matrix)
 
     return rank;
 }
+
 template <typename T>
-std::pair<Matrix<T>, Matrix<T>> eigenValuesAndVectors(Matrix<T>& matrix) {
-  // Check if the matrix is square
-  if (matrix.rows != matrix.cols) {
-    throw invalid_argument("Eigenvalues and eigenvectors are only defined for square matrices.");
-  }
+pair<Matrix<T>, Matrix<T>> luDecomposition(Matrix<T> &matrix, int n)
+{
 
-  int n = matrix.rows;
+    // Create matrices for L and U with the same dimensions as the input matrix
 
-  // Choose an initial guess vector (e.g., the first column of the matrix)
-  Matrix<T> x(n, 1);
-  for (int i = 0; i < n; ++i) {
-    x.set(i, 0, matrix.get(i, 0));
-  }
+    Matrix<T> lower(n, n, "lower");
+    Matrix<T> upper(n, n, "upper");
 
-  // Iterate until convergence (eigenvalue estimate stabilizes)
-  int max_iterations = 100;
-  T eigenvalue_old, eigenvalue_new;
-  for (int iter = 0; iter < max_iterations; ++iter) {
-    // Perform matrix-vector multiplication (y = A * x)
-    Matrix<T> y(n, 1);
-    for (int i = 0; i < n; ++i) {
-      T sum = 0;
-      for (int j = 0; j < n; ++j) {
-        sum += matrix.get(i, j) * x.get(j, 0);
-      }
-      y.set(i, 0, sum);
+    // Initialize matrices to zero
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+            lower.set(i, j, 0.0);
+            upper.set(i, j, 0.0);
+        }
     }
 
-    // Normalize the resulting vector (x = y / ||y||)
-    T norm_value = norm(y); // Call the external norm function
-    for (int i = 0; i < n; ++i) {
-      x.set(i, 0, y.get(i, 0) / norm_value);
+    // Decomposing matrix into Upper and Lower triangular matrix
+    for (int i = 0; i < n; ++i)
+    {
+        // Upper Triangular
+        for (int k = i; k < n; ++k)
+        {
+            T sum = 0.0;
+            for (int j = 0; j < i; ++j)
+            {
+                sum += lower.get(i, j) * upper.get(j, k);
+            }
+            upper.set(i, k, matrix.get(i, k) - sum);
+
+            // Round to 4 decimal places
+            upper.set(i, k, std::round(upper.get(i, k) * 10000.0) / 10000.0);
+        }
+
+        // Lower Triangular
+        for (int k = i; k < n; ++k)
+        {
+            if (i == k)
+            {
+                lower.set(i, i, 1.0); // Diagonal as 1
+            }
+            else
+            {
+                T sum = 0.0;
+                for (int j = 0; j < i; ++j)
+                {
+                    sum += lower.get(k, j) * upper.get(j, i);
+                }
+                lower.set(k, i, (matrix.get(k, i) - sum) / upper.get(i, i));
+
+                // Round to 4 decimal places
+                lower.set(k, i, std::round(lower.get(k, i) * 10000.0) / 10000.0);
+            }
+        }
     }
 
-    // Calculate the Rayleigh quotient (estimate of the eigenvalue)
-    eigenvalue_new = vectorDotProduct(matrix, x); // Call the external vectorDotProduct function
-
-    // Check for convergence (significant change in eigenvalue estimate)
-    if (iter > 0 && abs(eigenvalue_new - eigenvalue_old) / abs(eigenvalue_old) < 1e-6) {
-      break;
-    }
-
-    eigenvalue_old = eigenvalue_new;
-  }
-
-  // Create a matrix to store the eigenvector
-  Matrix<T> eigenvector(n, 1);
-  for (int i = 0; i < n; ++i) {
-    eigenvector.set(i, 0, x.get(i, 0));
-  }
-
-  // Create a result pair to hold eigenvalues (as a diagonal matrix) and eigenvectors
-  Matrix<T> eigenvalues(1, 1);
-  eigenvalues.set(0, 0, eigenvalue_new);
-  return make_pair(eigenvalues, eigenvector);
+    // Return the pair of Lower and Upper matrices
+    return {lower, upper};
 }
 
 template <typename T>
@@ -501,7 +568,16 @@ T determinant(Matrix<T> &matrix)
     for (int col = 0; col < matrix.cols; ++col)
     {
         // Create a minor matrix by excluding the first row and the current column
-        Matrix<T> minor(matrix.rows - 1, matrix.cols - 1);
+        std::ostringstream oss;
+        res[0][3]++;
+        oss << "Minor" << res[0][3];
+        string resname = oss.str();
+        Matrix<T> minor(matrix.rows - 1, matrix.cols - 1, resname);
+        std::ostringstream minorOss;
+        res[0][4]++; // Assuming res is a global 2D array
+        minorOss << matrix.name << "Minor" << res[0][4];
+        std::string minorName = minorOss.str();
+
         for (int i = 1; i < matrix.rows; ++i)
         {
             int minor_col = 0;
@@ -516,610 +592,1098 @@ T determinant(Matrix<T> &matrix)
         }
 
         // Calculate the cofactor and add it to the determinant sum
-        determinant_sum += pow(-1, col) * matrix.get(0, col) * determinant(minor);
+        determinant_sum += std::round(pow(-1, col) * matrix.get(0, col) * determinant(minor) * 10000.0) / 10000.0;
     }
 
     return determinant_sum;
 }
 
 template <typename T>
-std::pair<Matrix<T>, Matrix<T>> getMatrices() {
-  cout << "Matrix A:" << endl;
-  Matrix<T> matrix_A = createMatrix<T>();
-
-  cout << "Matrix B:" << endl;
-  Matrix<T> matrix_B = createMatrix<T>();
-
-  return std::make_pair(matrix_A, matrix_B);
-}
-
-
-
-template <typename T>
-Matrix<T> addMatrices(Matrix<T>& matrix_A, Matrix<T>& matrix_B) {
-    if (matrix_A.rows != matrix_B.rows || matrix_A.cols != matrix_B.cols) {
-        throw std::invalid_argument("Matrices must have the same dimensions for addition.");
+Matrix<T> matrixInverse(Matrix<T> &matrix)
+{
+    // Check if the matrix is square
+    if (matrix.rows != matrix.cols)
+    {
+        throw std::invalid_argument("Matrix inverse is only defined for square matrices.");
     }
 
-    Matrix<T> result(matrix_A.rows, matrix_A.cols);
+    int n = matrix.rows;
 
-    for (int i = 0; i < matrix_A.rows; ++i) {
-        for (int j = 0; j < matrix_A.cols; ++j) {
+    // Check if the matrix is singular by calculating its determinant
+    auto det = determinant(matrix);
+    if (det == 0)
+    {
+        throw std::invalid_argument("The input matrix is singular, and its inverse does not exist.");
+    }
+
+    // Perform LU decomposition of the matrix
+    pair<Matrix<T>, Matrix<T>> lu = luDecomposition(matrix, n);
+    Matrix<T> L = lu.first;
+    Matrix<T> U = lu.second;
+
+    // Create an identity matrix with the same dimensions as the input matrix
+    Matrix<T> identity(n, n, "I");
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+            if (i != j)
+                identity.set(i, j, 0.0);
+            else
+                identity.set(i, j, 1);
+        }
+    }
+
+    // Initialize the inverse matrix to zero
+    std::ostringstream inverseOss;
+    res[0][5]++; // Assuming res is a global 2D array
+    inverseOss << matrix.name << "Inverse" << res[0][5];
+    std::string inverseName = inverseOss.str();
+    Matrix<T> inverse(n, n, inverseName);
+
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+            inverse.set(i, j, 0.0);
+        }
+    }
+
+    // Solve the system of equations L * y = identity for each column of the identity matrix
+    // This gives us the columns of the inverse matrix
+    for (int j = 0; j < n; ++j)
+    {
+        Matrix<T> y(n, 1, "col1"); // Create a column vector to store the solution
+
+        // Forward substitution
+        for (int i = 0; i < n; ++i)
+        {
+            T sum = 0;
+            // Check for division by zero in U.get(i, i) before division
+            if (std::abs(U.get(i, i)) < std::numeric_limits<T>::epsilon())
+            {
+                throw std::invalid_argument("Matrix is nearly singular, inverse calculation may be inaccurate.");
+            }
+            for (int k = 0; k < i; ++k)
+            {
+                sum += L.get(i, k) * y.get(k, 0);
+            }
+            y.set(i, 0, identity.get(i, j) - sum);
+        }
+
+        // Backward substitution
+        for (int i = n - 1; i >= 0; --i)
+        {
+            T sum = 0;
+            // Check for division by zero in U.get(i, i) before division
+            if (std::abs(U.get(i, i)) < std::numeric_limits<T>::epsilon())
+            {
+                throw std::invalid_argument("Matrix is nearly singular, inverse calculation may be inaccurate.");
+            }
+            for (int k = i + 1; k < n; ++k)
+            {
+                sum += U.get(i, k) * inverse.get(k, j);
+            }
+            inverse.set(i, j, (y.get(i, 0) - sum) / U.get(i, i));
+        }
+    }
+
+    // Add the inverse matrix to the matrices collection
+    getMatrices<T>()[inverseName] = inverse;
+
+    // Print the inverse matrix
+    cout << "Inverse of matrix " << matrix.name << ": " << inverse.name << endl;
+    displayMatrix(inverse);
+    return inverse;
+}
+template <typename T>
+void eigenValuesAndVectors(Matrix<T> &matrix)
+{
+    // Check if the matrix is square
+    if (matrix.rows != matrix.cols)
+    {
+        throw std::invalid_argument("Eigenvalues and eigenvectors are only defined for square matrices.");
+    }
+
+    int n = matrix.rows;
+
+    // Choose an initial guess vector (e.g., the first column of the matrix)
+    Matrix<T> x(n, 1, "X");
+    for (int i = 0; i < n; ++i)
+    {
+        x.set(i, 0, matrix.get(i, 0));
+    }
+
+    // Iterate until convergence (eigenvalue estimate stabilizes)
+    int max_iterations = 100;
+    double eigenvalue_old, eigenvalue_new;
+    for (int iter = 0; iter < max_iterations; ++iter)
+    {
+        // Perform matrix-vector multiplication (y = A * x)
+        Matrix<T> y(n, 1, "y");
+        for (int i = 0; i < n; ++i)
+        {
+            T sum = 0;
+            for (int j = 0; j < n; ++j)
+            {
+                sum += matrix.get(i, j) * x.get(j, 0);
+            }
+            y.set(i, 0, sum);
+        }
+
+        // Normalize the resulting vector (x = y / ||y||)
+        T norm_value = norm(y); // Assuming a norm function is available
+        for (int i = 0; i < n; ++i)
+        {
+            x.set(i, 0, y.get(i, 0) / norm_value);
+        }
+
+        // Calculate the Rayleigh quotient (estimate of the eigenvalue)
+        eigenvalue_new = vectorDotProduct(matrix, x); // Assuming a vectorDotProduct function is available
+
+        // Check for convergence (significant change in eigenvalue estimate)
+        if (iter > 0 && std::abs(eigenvalue_new - eigenvalue_old) / std::abs(eigenvalue_old) < 1e-6)
+        {
+            break;
+        }
+
+        eigenvalue_old = eigenvalue_new;
+    }
+
+    // Create a matrix to store the eigenvector with a name
+    std::ostringstream eigenvectorOss;
+    res[0][3]++; // Assuming res is a global 2D array
+    eigenvectorOss << matrix.name << "Eigenvector" << res[0][3];
+    std::string eigenvectorName = eigenvectorOss.str();
+    Matrix<T> eigenvector(n, 1, eigenvectorName);
+    for (int i = 0; i < n; ++i)
+    {
+        eigenvector.set(i, 0, x.get(i, 0));
+    }
+
+    // Create a matrix to store the eigenvalue with a name
+    std::ostringstream eigenvalueOss;
+    res[0][4]++;
+    eigenvalueOss << matrix.name << "Eigenvalue" << res[0][4];
+    std::string eigenvalueName = eigenvalueOss.str();
+    Matrix<T> eigenvalue(1, 1, eigenvalueName);
+    eigenvalue.set(0, 0, eigenvalue_new);
+
+    // Add matrices to global matrices
+    getMatrices<T>()[eigenvectorName] = eigenvector;
+    getMatrices<T>()[eigenvalueName] = eigenvalue;
+
+    // Display matrices
+    cout << "Eigenvector of the matrix: " << matrix.name << endl;
+    displayMatrix(eigenvector);
+    cout << "Eigenvalue of the matrix: " << matrix.name << endl;
+    displayMatrix(eigenvalue);
+}
+template <typename T>
+void luDecomposition(Matrix<T> &matrix)
+{
+    // Check if the matrix is square
+    if (matrix.rows != matrix.cols)
+    {
+        throw std::invalid_argument("LU decomposition is only defined for square matrices.");
+    }
+
+    // Create matrices for L and U with the same dimensions as the input matrix
+    int n = matrix.rows;
+    std::ostringstream lowerOss, upperOss;
+    res[0][2]++; // Assuming res is a global 2D array
+    lowerOss << "Lower" << res[0][2];
+    upperOss << "Upper" << res[0][2];
+    std::string lowerName = lowerOss.str();
+    std::string upperName = upperOss.str();
+    Matrix<T> lower(n, n, lowerName);
+    Matrix<T> upper(n, n, upperName);
+
+    // Initialize matrices to zero
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+            lower.set(i, j, 0.0);
+            upper.set(i, j, 0.0);
+        }
+    }
+
+    // Decomposing matrix into Upper and Lower triangular matrix
+    for (int i = 0; i < n; ++i)
+    {
+        // Upper Triangular
+        for (int k = i; k < n; ++k)
+        {
+            T sum = 0.0;
+            for (int j = 0; j < i; ++j)
+            {
+                sum += lower.get(i, j) * upper.get(j, k);
+            }
+            upper.set(i, k, matrix.get(i, k) - sum);
+
+            // Round to 4 decimal places
+            upper.set(i, k, std::round(upper.get(i, k) * 10000.0) / 10000.0);
+        }
+
+        // Lower Triangular
+        for (int k = i; k < n; ++k)
+        {
+            if (i == k)
+            {
+                lower.set(i, i, 1.0); // Diagonal as 1
+            }
+            else
+            {
+                T sum = 0.0;
+                for (int j = 0; j < i; ++j)
+                {
+                    sum += lower.get(k, j) * upper.get(j, i);
+                }
+                lower.set(k, i, (matrix.get(k, i) - sum) / upper.get(i, i));
+
+                // Round to 4 decimal places
+                lower.set(k, i, std::round(lower.get(k, i) * 10000.0) / 10000.0);
+            }
+        }
+    }
+
+    // Save lower and upper matrices
+    getMatrices<T>()[lowerName] = lower;
+    getMatrices<T>()[upperName] = upper;
+
+    // Print lower and upper matrices
+    cout << "Lower matrix: " << lower.name << endl;
+    displayMatrix(lower);
+    cout << "Upper matrix: " << upper.name << endl;
+    displayMatrix(upper);
+}
+template <typename T>
+Matrix<T> createMatrix()
+{
+    int rows, cols;
+    string name;
+
+    while (true)
+    {
+        cout << "Rows: ";
+
+        if (!(cin >> rows) || rows <= 0)
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Please enter a positive integer for rows." << endl;
+            continue;
+        }
+
+        cout << "Cols: ";
+
+        if (!(cin >> cols) || cols <= 0)
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Please enter a positive integer for columns." << endl;
+            continue;
+        }
+
+        cout << "Enter a name for the matrix: ";
+        cin >> name;
+
+        if (name.empty())
+        {
+            cout << "Matrix name cannot be empty. Please enter a valid name." << endl;
+            continue;
+        }
+
+        if (getMatrices<double>().count(name))
+        {
+            cout << "The name " << name << " is already being used by another matrix, give a new name to the matrix" << endl;
+            continue;
+        }
+
+        if (name == "new")
+        {
+            cout << "The name new is already inavlid, give another name to the matrix" << endl;
+            continue;
+        }
+
+        break;
+    }
+
+    Matrix<T> matrix(rows, cols, name);
+    matrix.takeInput();
+    cout << "The inputted matrix '" << matrix.name << "' is:" << endl;
+    displayMatrix(matrix);
+
+    getMatrices<T>()[matrix.name] = matrix; // Store the matrix in the unordered_map
+
+    return matrix;
+}
+// Binary Operations:
+template <typename T>
+void addMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
+{
+    std::ostringstream name;
+    res[1][0]++; // Assuming res is a global 2D array
+    name << "Add" << res[1][0];
+    std::string name1 = name.str();
+    Matrix<T> result(matrix_A.rows, matrix_A.cols, name1);
+
+    for (int i = 0; i < matrix_A.rows; ++i)
+    {
+        for (int j = 0; j < matrix_A.cols; ++j)
+        {
             result.set(i, j, matrix_A.get(i, j) + matrix_B.get(i, j));
         }
     }
 
-    return result;
+    // Add result matrix to matrices map
+    getMatrices<T>()[name1] = result;
+
+    // Display result matrix
+    cout << "Result matrix: " << result.name << endl;
+    displayMatrix(result);
 }
 
 template <typename T>
-Matrix<T> addMatrices( std::vector<Matrix<T>>& matrices) {
-    if (matrices.size() < 2) {
-        throw std::invalid_argument("At least two matrices are required for addition.");
-    }
-    // Use fold expression to add matrices
-    Matrix<T> result = matrices[0];
-    // Loop to add each matrix to the result
-    for (size_t i = 1; i < matrices.size(); ++i) {
-        result = addMatrices(result, matrices[i]);
-    }
-
-    return result;
-}
-
-
-
-template <typename T>
-Matrix<T> subMatrices(Matrix<T>& matrix_A, Matrix<T>& matrix_B) 
+void subMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
 {
-  // Check if matrices have the same dimensions
-  if (matrix_A.rows != matrix_B.rows || matrix_A.cols != matrix_B.cols) {
-    throw invalid_argument("Matrices must have the same dimensions for subtraction.");
-  }
+    std::ostringstream name;
+    res[1][1]++;
+    name << "Sub" << res[1][1];
+    std::string name1 = name.str();
+    Matrix<T> result(matrix_A.rows, matrix_A.cols, name1);
 
-  // Create a new matrix with the same dimensions as A and B
-  Matrix<T> matrix_C(matrix_A.rows, matrix_A.cols);
-
-  // Add corresponding elements of A and B
-  for (int i = 0; i < matrix_A.rows; ++i) {
-    for (int j = 0; j < matrix_A.cols; ++j) {
-      matrix_C.set(i, j, matrix_A.get(i, j) - matrix_B.get(i, j));
+    for (int i = 0; i < matrix_A.rows; ++i)
+    {
+        for (int j = 0; j < matrix_A.cols; ++j)
+        {
+            result.set(i, j, matrix_A.get(i, j) - matrix_B.get(i, j));
+        }
     }
-  }
 
-  // Return the resulting sum matrix
-  return matrix_C;
+    // Add result matrix to matrices map
+    getMatrices<T>()[name1] = result;
+
+    // Display result matrix
+    cout << "Result matrix: " << result.name << endl;
+    displayMatrix(result);
 }
 
 template <typename T>
-Matrix<T> ewmMatrices(Matrix<T>& matrix_A, Matrix<T>& matrix_B) 
+void emMulMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
 {
-  // Check if matrices have the same dimensions
-  if (matrix_A.rows != matrix_B.rows || matrix_A.cols != matrix_B.cols) {
-    throw invalid_argument("Matrices must have the same dimensions for Element-wise Multiplication.");
-  }
+    std::ostringstream name;
+    res[1][3]++;
+    name << "emMul" << res[1][3];
+    std::string name1 = name.str();
+    Matrix<T> result(matrix_A.rows, matrix_A.cols, name1);
 
-  // Create a new matrix with the same dimensions as A and B
-  Matrix<T> matrix_C(matrix_A.rows, matrix_A.cols);
-
-  // Add corresponding elements of A and B
-  for (int i = 0; i < matrix_A.rows; ++i) {
-    for (int j = 0; j < matrix_A.cols; ++j) {
-      matrix_C.set(i, j, matrix_A.get(i, j) * matrix_B.get(i, j));
+    for (int i = 0; i < matrix_A.rows; ++i)
+    {
+        for (int j = 0; j < matrix_A.cols; ++j)
+        {
+            result.set(i, j, matrix_A.get(i, j) * matrix_B.get(i, j));
+        }
     }
-  }
 
-  // Return the resulting sum matrix
-  return matrix_C;
+    // Add result matrix to matrices map
+    getMatrices<T>()[name1] = result;
+
+    // Display result matrix
+    cout << "Result matrix: " << result.name << endl;
+    displayMatrix(result);
 }
 
 template <typename T>
-Matrix<T> multiplyMatrices(Matrix<T>& matrix_A, Matrix<T>& matrix_B) {
-  // Check if column count of A matches row count of B for multiplication
-  if (matrix_A.cols != matrix_B.rows) {
-    throw invalid_argument("Incompatible matrix dimensions for multiplication. Number of columns in A must equal number of rows in B.");
-  }
-
-  // Create a new result matrix C with dimensions (rows of A, columns of B)
-  int rows_C = matrix_A.rows;
-  int cols_C = matrix_B.cols;
-  Matrix<T> matrix_C(rows_C, cols_C);
-
-  // Perform matrix multiplication using nested loops
-  for (int i = 0; i < rows_C; ++i) {
-    for (int j = 0; j < cols_C; ++j) {
-      T sum = 0;
-      for (int k = 0; k < matrix_A.cols; ++k) { // Inner loop iterates over columns of A (also rows of B)
-        sum += matrix_A.get(i, k) * matrix_B.get(k, j);
-      }
-      matrix_C.set(i, j, sum);
+void mulMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
+{
+    std::ostringstream name;
+    res[1][2]++;
+    name << "Mul" << res[1][2];
+    std::string name1 = name.str();
+    Matrix<T> result(matrix_A.rows, matrix_B.cols, name1);
+    initializeToZero(result);
+    // Perform matrix multiplication using nested loops
+    for (int i = 0; i < matrix_A.rows; ++i)
+    {
+        for (int j = 0; j < matrix_B.cols; ++j)
+        {
+            T sum = 0;
+            for (int k = 0; k < matrix_A.cols; ++k)
+            {
+                sum += matrix_A.get(i, k) * matrix_B.get(k, j);
+            }
+            result.set(i, j, sum);
+        }
     }
-  }
 
-  // Return the resulting product matrix
-  return matrix_C;
+    // Add result matrix to matrices map
+    getMatrices<T>()[name1] = result;
+
+    // Display result matrix
+    cout << "Result matrix: " << result.name << endl;
+    displayMatrix(result);
 }
 
-#include <iostream>
-#include <limits> // for numeric_limits<streamsize>::max()
-#include <sstream> // for stringstream
-
-using namespace std;
-
-// Function to solve a system of linear equationstemplate <typename T>
 template <typename T>
-Matrix<T> solveSystemOfLinearEquations(Matrix<T>& A, Matrix<T>& b) {
-    try {
+void displayMatrix(Matrix<T> &matrix)
+{
+    for (int j = 0; j < matrix.cols; ++j)
+    {
+        cout << "+---";
+    }
+    cout << "+" << endl;
+
+    for (int i = 0; i < matrix.rows; ++i)
+    {
+        cout << "| ";
+        for (int j = 0; j < matrix.cols; ++j)
+        {
+            cout << matrix.get(i, j) << " | ";
+        }
+        cout << endl;
+
+        if (i < matrix.rows - 1)
+        {
+            for (int j = 0; j < matrix.cols; ++j)
+            {
+                cout << "+---";
+            }
+            cout << "+" << endl;
+        }
+    }
+
+    for (int j = 0; j < matrix.cols; ++j)
+    {
+        cout << "+---";
+    }
+    cout << "+" << endl;
+}
+
+void printMatrixfromMatrices(string matrixName)
+{
+    // Check if the matrix exists in the map
+    if (getMatrices<double>().count(matrixName))
+    {
+        auto &matrix = getMatrices<double>()[matrixName]; // Access matrix using its name
+        cout << "Printing matrix '" << matrixName << "':" << endl;
+        displayMatrix<double>(matrix);
+    }
+    else
+    {
+        cout << "Matrix '" << matrixName << "' not found." << endl;
+    }
+}
+
+string getMatrixName()
+{
+    string name;
+
+    while (true)
+    {
+        cout << "Enter the name of the matrix (or 'new' to create a new one): ";
+        cin >> name;
+
+        if (name == "new")
+        {
+            return ""; // Indicate new matrix creation
+        }
+        else if (getMatrices<double>().count(name))
+        {
+            // Matrix with the name exists, return it
+            return name;
+        }
+        else
+        {
+            cout << "Matrix '" << name << "' does not exist." << endl;
+        }
+    }
+}
+
+string validName()
+{
+    while (true)
+    {
+        string matrixName = getMatrixName();
+        if (matrixName.empty())
+        {
+            // Create a new matrix
+            Matrix<double> newMatrix = createMatrix<double>();
+            matrixName = newMatrix.name; // Store the new matrix
+            cout << "New matrix created successfully." << endl;
+            return matrixName;
+        }
+        else
+        {
+            // Use the existing matrix with the given name
+            if (getMatrices<double>().count(matrixName))
+            {
+                // Access and perform operations on the existing matrix
+                cout << "Using matrix '" << matrixName << "' for operations." << endl;
+                printMatrixfromMatrices(matrixName);
+                return matrixName;
+            }
+            else
+            {
+                cout << "Error: Matrix '" << matrixName << "' not found after creation attempt." << endl;
+            }
+        }
+    }
+}
+
+void printMatrixNames()
+{
+    cout << "Matrix names:" << endl;
+
+    // Assuming matrices() returns a map or unordered_map with string keys
+    auto &matrixMap = getMatrices<double>();
+    for (const auto &pair : matrixMap)
+    {
+        cout << pair.first << endl;
+    }
+}
+template <typename T>
+bool checkDimensions(Matrix<T> &matrix1, Matrix<T> &matrix2)
+{
+    return matrix1.rows == matrix2.rows && matrix1.cols == matrix2.cols;
+}
+template <typename T>
+void initializeToZero(Matrix<T> &matrix)
+{
+    for (int i = 0; i < matrix.rows; ++i)
+    {
+        for (int j = 0; j < matrix.cols; ++j)
+        {
+            matrix.set(i, j, 0);
+        }
+    }
+}
+template <typename T>
+Matrix<T> solveSystemOfLinearEquations(Matrix<T> &A, Matrix<T> &b)
+{
+    try
+    {
         // Calculate the determinant of the coefficient matrix A
         auto det = determinant(A);
 
-        if (det == 0) {
+        if (det == 0)
+        {
             // If the determinant is zero, the matrix is singular
             // Check if the system has a solution or not
-            pair<Matrix<T>, Matrix<T>> lu = luDecomposition(A);
-            Matrix<T>& L = lu.first;
-            Matrix<T>& U = lu.second;
+            pair<Matrix<T>, Matrix<T>> lu = luDecomposition(A, A.rows);
+            Matrix<T> &L = lu.first;
+            Matrix<T> &U = lu.second;
 
             // Create a vector y using forward substitution
-            Matrix<T> y(A.rows, 1);
-            for (int i = 0; i < A.rows; ++i) {
+            Matrix<T> y(A.rows, 1, "y");
+            for (int i = 0; i < A.rows; ++i)
+            {
                 y.set(i, 0, b.get(i, 0));
-                for (int j = 0; j < i; ++j) {
+                for (int j = 0; j < i; ++j)
+                {
                     y.set(i, 0, y.get(i, 0) - L.get(i, j) * y.get(j, 0));
                 }
             }
 
             // Check if y is the zero vector
             bool isZeroVector = true;
-            for (int i = 0; i < A.rows; ++i) {
-                if (y.get(i, 0) != 0) {
+            for (int i = 0; i < A.rows; ++i)
+            {
+                if (y.get(i, 0) != 0)
+                {
                     isZeroVector = false;
                     break;
                 }
             }
 
-            if (isZeroVector) {
+            if (isZeroVector)
+            {
                 // If y is the zero vector, the system has infinitely many solutions
                 cout << "The system of equations has infinitely many solutions." << endl;
-                return Matrix<T>(A.rows, 1); // Return an arbitrary solution
-            } else {
+                return Matrix<T>(A.rows, 1, "temp"); // Return an arbitrary solution
+            }
+            else
+            {
                 // If y is not the zero vector, the system has no solution
                 cout << "The system of equations has no solution." << endl;
-                return Matrix<T>(0, 0); // Return an empty matrix
+                return Matrix<T>(0, 0, "temp"); // Return an empty matrix
             }
-        } else {
+        }
+        else
+        {
             // If the determinant is not zero, calculate the inverse of A
             Matrix<T> inverseA = matrixInverse(A);
+            Matrix<T> result(inverseA.rows, b.cols, "name1");
+            initializeToZero(result);
+            // Perform matrix multiplication using nested loops
+            for (int i = 0; i < inverseA.rows; ++i)
+            {
+                for (int j = 0; j < b.cols; ++j)
+                {
+                    T sum = 0;
+                    for (int k = 0; k < inverseA.cols; ++k)
+                    {
+                        sum += inverseA.get(i, k) * b.get(k, j);
+                    }
+                    result.set(i, j, sum);
+                }
+            }
 
             // Multiply the inverse of A with the constant vector b
-            return multiplyMatrices(inverseA, b);
+            return result;
         }
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return Matrix<T>(0, 0);
+    }
+    catch (const std::exception &e)
+    {
+        // std::cerr << "Error: " << e.what() << std::endl;
+        return Matrix<T>(0, 0, "zero");
     }
 }
-void solveSystemOfLinearEquations() {
-  int num_variables;
+void solveSystemOfLinearEquations()
+{
+    int num_variables;
 
-  // Get user input for the number of variables with error handling
-  while (true) {
-    cout << "Enter the number of variables (same as the number of equations): ";
-    if (!(cin >> num_variables)) {
-      // Handle invalid input (clear input buffer)
-      cin.clear();
-      cin.ignore(numeric_limits<streamsize>::max(), '\n');
-      cout << "Invalid input. Please enter a positive integer." << endl;
-      continue;
+    // Get user input for the number of variables with error handling
+    while (true)
+    {
+        cout << "Enter the number of variables (same as the number of equations): ";
+        if (!(cin >> num_variables))
+        {
+            // Handle invalid input (clear input buffer)
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Please enter a positive integer." << endl;
+            continue;
+        }
+
+        if (num_variables <= 0)
+        {
+            cout << "Error: The number of variables must be positive." << endl;
+            continue;
+        }
+
+        break; // Exit the loop if valid input is received
     }
 
-    if (num_variables <= 0) {
-      cout << "Error: The number of variables must be positive." << endl;
-      continue;
+    // Create matrices for coefficients and constants (same number of rows)
+    Matrix<double> A(num_variables, num_variables, "Coeff");
+    Matrix<double> b(num_variables, 1, "Const");
+
+    // Print table header for coefficients
+    std::cout << endl
+              << "Enter the coefficients of the equations (row-wise):" << endl;
+
+    // Take input for coefficients and constant in a single line
+    for (int i = 0; i < num_variables; ++i)
+    {
+        std::cout << "Eq " << i + 1 << " : " << endl;
+        for (int j = 0; j < num_variables; ++j)
+        {
+            double value;
+            cout << "Coeff of x" << j + 1 << ": ";
+            cin >> value;
+            A.set(i, j, value);
+        }
+        cout << "Const of Eq" << i + 1 << ": ";
+        double constant;
+        cin >> constant;
+        b.set(i, 0, constant);
+        cout << endl;
     }
 
-    break; // Exit the loop if valid input is received
-  }
+    cout << "Coefficient Matrix A:" << endl;
+    displayMatrix(A);
+    cout << "Constant Vector b:" << endl;
+    displayMatrix(b);
 
-  // Create matrices for coefficients and constants (same number of rows)
-  Matrix<double> A(num_variables, num_variables);
-  Matrix<double> b(num_variables, 1);
+    Matrix<double> solution(1, num_variables, "Sol");
+    try
+    {
+        solution = solveSystemOfLinearEquations(A, b);
 
-  // Print table header for coefficients
-  std::cout << endl << "Enter the coefficients of the equations (row-wise):" << endl;
-
-  // Take input for coefficients and constant in a single line
-  for (int i = 0; i < num_variables; ++i) {
-    std::cout << "Eq " << i + 1 << " : ";
-    for (int j = 0; j < num_variables; ++j) {
-      double value;
-      cout << "Coeff of x" << j + 1 << ": ";
-      cin >> value;
-      A.set(i, j, value);
-    }
-    cout << "Const of Eq" << i + 1 << ": ";
-    double constant;
-    cin >> constant;
-    b.set(i, 0, constant);
-    cout << endl;
-  }
-
-  cout << "Coefficient Matrix A:" << endl;
-  displayMatrix(A); // Assuming your Matrix class has a printMatrix() method
-  cout << "Constant Vector b:" << endl;
-  displayMatrix(b);
-  // Solve the system of linear equations (assuming a suitable library function exists)
-  Matrix<double> solution(1,num_variables);
-  try {
-    solution = solveSystemOfLinearEquations(A,b); 
-
-    // Check if a solution was found
-    if (solution.rows == 0) {
-      cout << "The system of equations has no solution." << endl;
-    } else {
-      cout << "Solution to the system of linear equations:" << endl;
-      for (int i = 0; i < num_variables; ++i) {
-        cout << "x" << i + 1 << " = " << solution.get(i, 0) << endl;
-      }
-    }
-  } catch (const std::exception& e) {
-    cerr << "Error: " << e.what() << endl;
-  }
-
-}
-
-int main() {
-    while (true) {
-        cout << "\nMenu:" << endl;
-        cout << "1. Unary Matrix Operations" << endl;
-        cout << "2. Binary Matrix Operations" << endl;
-        cout << "3. Addition of a Array of Matrices " << endl;
-        cout << "4. Solving System of Linear Equations " << endl;
-        cout << "5. Exit" << endl;
-        int choice;
-        cout << "Enter your choice: ";
-        if (!(std::cin >> choice)) {
-      std::cin.clear(); // Clear the error state from cin
-      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
-      std::cout << "Invalid input. Please enter a number (1-5)." << std::endl;
-      continue;
-    }
-
-    // Check if choice is within valid range (1-4)
-    if (choice < 1 || choice > 5) {
-      std::cout << "Invalid choice. Please enter a number between 1 and 5." << std::endl;
-      continue;
-    }
-        
-        
-        
-        switch (choice) {
-            case 1:
-                // Submenu for unary matrix operations
-                while (true) {
-                    cout << "\nUnary Matrix Operations:" << endl;
-                    cout << "1. Matrix Trace" << endl;
-                    cout << "2. Matrix Average" << endl;
-                    cout << "3. Matrix Transpose " << endl;
-                    cout << "4. Matrix LU Decomposition " << endl;
-                    cout << "5. Matrix Inverse " << endl;
-                    cout << "6. Matrix Determinant " << endl;
-                    cout << "7. Matrix Rank " << endl;
-                    cout << "8. Matrix Eigen Vectors and Values " << endl;
-                    cout << "9. Go Back to Main Menu" << endl;
-
-                    int subChoice;
-                    cout << "Enter your choice: ";
-                    if (!(std::cin >> subChoice)) {
-                        std::cin.clear(); // Clear the error state from cin
-                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
-                        std::cout << "Invalid input. Please enter a number (1-9)." << std::endl;
-                        continue;
-                    }
-
-                    // Check if choice is within valid range (1-4)
-                    if (subChoice < 1 || subChoice > 9) {
-                    std::cout << "Invalid choice. Please enter a number between 1 and 9." << std::endl;
-                    continue;
-                    }
-
-                    switch (subChoice) {
-                        case 1:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                matrixTrace(matrix);
-                                break;
-                            }
-                        case 2:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                calculateColumnMeans(matrix);
-                                break;
-                            }
-                        case 3:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                transpose(matrix);
-                                break;
-                            }
-                        case 4:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                try {
-                                    pair<Matrix<double>, Matrix<double>> lu = luDecomposition(matrix);
-                                    cout << "Lower triangular matrix (L):" << endl;
-                                    displayMatrix(lu.first);
-                                    cout << "Upper triangular matrix (U):" << endl;
-                                    displayMatrix(lu.second);
-                                } catch (const invalid_argument& e) {
-                                    cerr << "Error: " << e.what() << endl;
-                                }
-                                break;
-                            }
-                        case 5:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                try {
-                                    Matrix<double> inverse = matrixInverse(matrix);
-                                    cout << "Inverse of the matrix:" << endl;
-                                    displayMatrix(inverse);
-                                } catch (const invalid_argument& e) {
-                                    cerr << "Error: " << e.what() << endl;
-                                }
-                                break;
-                            }
-                        case 6:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                try {
-                                    auto det = determinant(matrix);
-                                    cout << "Determinant of the matrix: " << det << endl;
-                                } catch (const invalid_argument& e) {
-                                    cerr << "Error: " << e.what() << endl;
-                                }
-                                break;
-                            }
-                        case 7:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                int r = matrixRank(matrix);
-                                cout << "Rank of the matrix: " << r << endl;
-                                break;
-                            }
-                        case 8:
-                            {
-                                Matrix<double> matrix = createMatrix<double>();
-                                try {
-                                    if (matrix.rows != matrix.cols) {
-                                        throw invalid_argument("Eigenvalues and eigenvectors are only defined for square matrices.");
-                                    }
-                                    pair<Matrix<double>, Matrix<double>> result = eigenValuesAndVectors(matrix);
-                                    cout << "Eigenvalues:\n";
-                                    displayMatrix(result.first);
-                                    cout << "Eigenvectors:\n";
-                                    displayMatrix(result.second);
-                                } catch (const invalid_argument& e) {
-                                    cerr << "Error: " << e.what() << endl;
-                                }
-                                break;
-                            }
-                        case 9:
-                            {
-                                // Exit the unary operations submenu and go back to main menu
-                                break;
-                            }
-                        default:
-                            cout << "Invalid choice. Please try again." << endl;
-                    }
-                    if (subChoice == 9) {
-                        break;
-                    }
-                }
-                break;
-            case 2:
+        // Check if a solution was found
+        if (solution.rows == 0)
+        {
+            cout << "The system of equations has no or infinite solution." << endl;
+        }
+        else
+        {
+            cout << "Solution to the system of linear equations:" << endl;
+            for (int i = 0; i < num_variables; ++i)
             {
-                cout << "\nSelect Binary Operation:" << endl;
-                cout << "1. Matrix Addition" << endl;
-                cout << "2. Matrix Subtraction" << endl;
-                cout << "3. Matrix Multiplication" <<endl;
-                cout << "4. Matrix Element-wise Multiplication"<<endl;
-                cout << "5. Go Back to Main Menu" << endl;
+                cout << "x" << i + 1 << " = " << solution.get(i, 0) << endl;
+            }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        // cerr << "Error: " << e.what() << endl;
+    }
+}
+
+int main()
+{
+    char choice;
+
+    while (true)
+    {
+        cout << "\nMenu:" << endl;
+
+        cout << "1. Create a new matrix" << endl;
+        cout << "2. Print a stored matrix" << endl;
+        cout << "3. Unary Matrix Operations" << endl;            // Placeholder
+        cout << "4. Binary Matrix Operations" << endl;           // Placeholder
+        cout << "5. Addition of Array of Matrices" << endl;      // Placeholder
+        cout << "6. Solving System of Linear Equations" << endl; // Placeholder
+        cout << "7. Exit" << endl;
+
+        cout << "Enter your choice: ";
+        std::cin >> choice;
+
+        // Error handling for invalid input (non-char)
+        if (!std::cin)
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a letter (1-7)." << std::endl;
+            continue;
+        }
+
+        // Validate choice within range (1-7)
+        if (choice < '1' || choice > '7')
+        {
+            std::cout << "Invalid choice. Please enter a letter between 1 and 7." << std::endl;
+            continue;
+        }
+
+        switch (choice)
+        {
+        case '1':
+        {
+            // Call createMatrix to create a new matrix of any numeric type (int, double, etc.)
+            cout << "\nCreating a new matrix...\n";
+            createMatrix<double>(); // You can change the template argument here for different numeric types
+            break;
+        }
+        case '2':
+        {
+            string matrixName;
+            printMatrixNames();
+            cout << "\nEnter the name of the matrix to print: ";
+            cin >> matrixName;
+            printMatrixfromMatrices(matrixName);
+            break;
+        }
+
+        case '3':
+            // Submenu for unary matrix operations
+            while (true)
+            {
+                cout << "\nUnary Matrix Operations:" << endl;
+                cout << "1. Matrix Trace" << endl;
+                cout << "2. Matrix Average" << endl;
+                cout << "3. Matrix Transpose " << endl;
+                cout << "4. Matrix LU Decomposition " << endl;
+                cout << "5. Matrix Determinant " << endl;
+                cout << "6. Matrix Inverse " << endl;
+                cout << "7. Matrix Rank " << endl;
+                cout << "8. Matrix Eigen Vectors and Values " << endl;
+                cout << "9. Go Back to Main Menu" << endl;
 
                 int subChoice;
-                    cout << "Enter your choice: ";
-                    if (!(std::cin >> subChoice)) {
-                        std::cin.clear(); // Clear the error state from cin
-                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
-                        std::cout << "Invalid input. Please enter a number (1-5)." << std::endl;
-                        continue;
-                    }
-
-                    // Check if choice is within valid range (1-4)
-                    if (subChoice < 1 || subChoice > 5) {
-                    std::cout << "Invalid choice. Please enter a number between 1 and 5." << std::endl;
+                cout << "Enter your choice: ";
+                if (!(std::cin >> subChoice))
+                {
+                    std::cin.clear();                                                   // Clear the error state from cin
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Discard invalid input
+                    std::cout << "Invalid input. Please enter a number (1-9)." << std::endl;
                     continue;
-                    }
-
-               
-                switch (subChoice) {
-                case 1: {
-                    cout << "Matrix Addition is only performed on Matrices with same dimensions" << endl;
-
-                    try {
-                        // Get two matrices from the user using getMatrices function
-                        std::pair<Matrix<double>, Matrix<double>> matricesPair = getMatrices<double>();
-
-                        // Access the matrices from the pair
-                        Matrix<double> matrix_A = matricesPair.first;
-                        Matrix<double> matrix_B = matricesPair.second;
-
-                        // Check if dimensions are compatible before addition
-                        if (matrix_A.rows != matrix_B.rows || matrix_A.cols != matrix_B.cols) {
-                            throw invalid_argument("Matrices must have the same dimensions for addition.");
-                        }
-
-                        // Create an array of matrices and populate it with the two matrices
-                       // Matrix<double> matrices[2] = {matrix_A, matrix_B};
-
-                        // Perform matrix addition using the new addMatrices function
-                        Matrix<double> matrix_C = addMatrices(matrix_A, matrix_B);
-                        
-                        cout << "Sum of matrices:" << endl;
-                        displayMatrix(matrix_C);
-
-                    } catch (const invalid_argument& e) {
-                        cerr << "Error: " << e.what() << endl;
-                    }
-
-                    break;
                 }
 
-                case 2: {
-                    cout << "Matrix Subtraction is only performed on Matrices with same dimensions"<<endl;
-                    // Get two matrices from the user using getMatrices function
-                    std::pair<Matrix<double>, Matrix<double>> matrices = getMatrices<double>();
+                // Check if choice is within valid range (1-4)
+                if (subChoice < 1 || subChoice > 9)
+                {
+                    std::cout << "Invalid choice. Please enter a number between 1 and 9." << std::endl;
+                    continue;
+                }
 
-                    // Access the matrices from the pair
-                    Matrix<double> matrix_A = matrices.first;
-                    Matrix<double> matrix_B = matrices.second;
+                if (subChoice != 9)
+                {
+                    string nameofA = validName();
+                    auto &matrixA = getMatrices<double>()[nameofA];
 
-                    try {
-                        // Check if dimensions are compatible before addition
-                        if (matrix_A.rows != matrix_B.rows || matrix_A.cols != matrix_B.cols) {
-                        throw invalid_argument("Matrices must have the same dimensions for subtraction.");
+                    switch (subChoice)
+                    {
+                    case 1:
+                    {
+                        matrixTrace(matrixA);
+                        break;
+                    }
+                    case 2:
+                    {
+                        calculateColumnMeans(matrixA);
+                        break;
+                    }
+                    case 3:
+                    {
+                        transpose(matrixA);
+                        break;
+                    }
+                    case 4:
+                    {
+                        if (matrixA.rows == matrixA.cols)
+                        {
+                            luDecomposition(matrixA);
+                            break;
                         }
-
-                        // Perform matrix addition
-                        Matrix<double> matrix_C = subMatrices(matrix_A, matrix_B);
-                        cout << "Diffrences of matrices:" << endl;
-                        displayMatrix(matrix_C);
-                    } catch (const invalid_argument& e) {
-                        cerr << "Error: " << e.what() << endl;
-                    }
-                    break;
-                    }
-                case 3: {
-                    // Get two matrices from the user using getMatrices function
-                    std::pair<Matrix<double>, Matrix<double>> matrices = getMatrices<double>();
-
-                    // Access the matrices from the pair
-                    Matrix<double> matrix_A = matrices.first;
-                    Matrix<double> matrix_B = matrices.second;
-
-                    try {
-                        // Check if dimensions are compatible for multiplication (A columns = B rows)
-                        if (matrix_A.cols != matrix_B.rows) {
-                        throw invalid_argument("Incompatible matrix dimensions for multiplication. Number of columns in A must equal number of rows in B.");
+                        else
+                        {
+                            cout << "The matrix is not a sqaure matrix and hence LU Decompostion can not be performed" << endl;
+                            break;
                         }
-
-                        // Perform matrix multiplication
-                        Matrix<double> matrix_C = multiplyMatrices(matrix_A, matrix_B);
-                        cout << "Product of matrices (C = A * B):" << endl;
-                        displayMatrix(matrix_C);
-                    } catch (const invalid_argument& e) {
-                        cerr << "Error: " << e.what() << endl;
                     }
-                    break;
-                    }
-                case 4: {
-                    cout << "MatrixElement-wise Multiplication is only performed on Matrices with same dimensions"<<endl;
-                    // Get two matrices from the user using getMatrices function
-                    std::pair<Matrix<double>, Matrix<double>> matrices = getMatrices<double>();
-
-                    // Access the matrices from the pair
-                    Matrix<double> matrix_A = matrices.first;
-                    Matrix<double> matrix_B = matrices.second;
-
-                    try {
-                        // Check if dimensions are compatible before addition
-                        if (matrix_A.rows != matrix_B.rows || matrix_A.cols != matrix_B.cols) {
-                        throw invalid_argument("Matrices must have the same dimensions for Element-wise Multiplication.");
-                        }
-
-                        // Perform matrix addition
-                        Matrix<double> matrix_C = ewmMatrices(matrix_A, matrix_B);
-                        cout << "Product of Element-wise Multiplication:" << endl;
-                        displayMatrix(matrix_C);
-                    } catch (const invalid_argument& e) {
-                        cerr << "Error: " << e.what() << endl;
-                    }
-                    break;
-                    }
-
                     case 5:
-                            {
-                                // Exit the unary operations submenu and go back to main menu
-                                break;
-                            }
-                        default:
-                            cout << "Invalid choice. Please try again." << endl;
-                    }
-                    if (subChoice == 5) {
+                    {
+                        auto det = determinant(matrixA);
+                        cout << "Determinant of the matrix: " << det << endl;
                         break;
                     }
-                }
-                break;
-          case 3:
-            // Operations on an Array of Matrices submenu
-            {
-                std::vector<Matrix<double>> matrices;
-                int matrixCount;
-                std::cout << "Enter the number of matrices to add (min 2): ";
-                if (!(std::cin >> matrixCount) || matrixCount < 2) {
-                    std::cin.clear();
-                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                    std::cout << "Invalid input. Please enter a number greater than 1." << std::endl;
-                    break;
-                }
-
-                for (int i = 0; i < matrixCount; ++i) {
-                    std::cout << "Enter matrix " << i + 1 << " (rows cols): ";
-                    int rows, cols;
-                    if (!(std::cin >> rows >> cols)) {
-                        std::cin.clear();
-                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                        std::cout << "Invalid input. Please enter rows and cols." << std::endl;
-                        break;
-                    }
-
-                    Matrix<double> matrix(rows, cols);
-                    std::cout << "Enter matrix elements:" << std::endl;
-                    for (int r = 0; r < rows; ++r) {
-                        for (int c = 0; c < cols; ++c) {
-                            double element;
-                            if (!(std::cin >> element)) {
-                                std::cin.clear();
-                                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                                std::cout << "Invalid input. Please enter matrix elements." << std::endl;
-                                break;
-                            }
-                            matrix.set(r, c, element);
+                    case 6:
+                    {
+                        if (matrixA.rows == matrixA.cols)
+                        {
+                            auto x = matrixInverse(matrixA);
+                            break;
+                        }
+                        else
+                        {
+                            cout << "The matrix is not a sqaure matrix and hence Inverse of the matrix does not exist" << endl;
+                            break;
                         }
                     }
-                    matrices.push_back(matrix);
-                }
+                    case 7:
+                    {
 
-                try {
-                    Matrix<double> result = addMatrices(matrices);  // Use the updated addMatrices function
-                    std::cout << "Result of adding matrices:" << std::endl;
-                    displayMatrix(result);  // Display the result matrix
-                } catch (const std::exception& e) {
-                    std::cerr << "Error: " << e.what() << std::endl;
+                        int r = matrixRank(matrixA);
+                        cout << "Rank of the matrix: " << r << endl;
+                        break;
+                    }
+                    case 8:
+                    {
+                        if (matrixA.rows == matrixA.cols)
+                        {
+                            eigenValuesAndVectors(matrixA);
+                            break;
+                        }
+                        else
+                        {
+                            cout << "The matrix is not a sqaure matrix " << endl;
+                        }
+                    }
+                    case 9:
+                    {
+                        // Exit the unary operations submenu and go back to main menu
+                        break;
+                    }
+                    default:
+                        cout << "Invalid choice. Please try again." << endl;
+                    }
+                }
+                if (subChoice == 9)
+                {
+                    break;
                 }
             }
             break;
-
-            case 4: 
+        case '4':
+        {
+            // Binary matrix operations submenu
+            while (true)
             {
-                solveSystemOfLinearEquations();
-                break;
+                cout << "\nBinary Matrix Operation:" << endl;
+                cout << "1. Matrix Addition" << endl;
+                cout << "2. Matrix Subtraction" << endl;
+                cout << "3. Matrix Multiplication" << endl;
+                cout << "4. Matrix Element-wise Multiplication" << endl;
+                cout << "5. Go Back to Main Menu" << endl;
 
+                int subChoice;
+                cout << "Enter your choice: ";
+                if (!(std::cin >> subChoice))
+                {
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    std::cout << "Invalid input. Please enter a number (1-5)." << std::endl;
+                    continue;
+                }
+
+                if (subChoice < 1 || subChoice > 5)
+                {
+                    std::cout << "Invalid choice. Please enter a number between 1 and 5." << std::endl;
+                    continue;
+                }
+
+                if (subChoice != 5)
+                {
+                    cout << "Matrix 1:" << endl;
+                    string nameofA = validName();
+                    auto &matrixA = getMatrices<double>()[nameofA];
+                    cout << "Matrix 2:" << endl;
+                    string nameofB = validName();
+                    auto &matrixB = getMatrices<double>()[nameofB];
+
+                    switch (subChoice)
+                    {
+                    case 1:
+                    {
+                        if (matrixA.rows == matrixB.rows && matrixA.cols == matrixB.cols)
+                        {
+                            addMatrix(matrixA, matrixB);
+                        }
+                        else
+                        {
+                            cout << "The matrices should be of equal dimensions " << endl;
+                        }
+
+                        break;
+                    }
+
+                    case 2:
+                    {
+                        if (matrixA.rows == matrixB.rows && matrixA.cols == matrixB.cols)
+                        {
+                            subMatrix(matrixA, matrixB);
+                        }
+                        else
+                        {
+                            cout << "The matrices should be of equal dimensions " << endl;
+                        }
+
+                        break;
+                    }
+                    case 3:
+                    {
+                        if (matrixB.rows == matrixA.cols)
+                        {
+                            mulMatrix(matrixA, matrixB);
+                        }
+                        else
+                        {
+                            cout << "Dimensions are not compatible" << endl;
+                        }
+                        break;
+                    }
+                    case 4:
+                    {
+                        if (matrixA.rows == matrixB.rows && matrixA.cols == matrixB.cols)
+                        {
+                            emMulMatrix(matrixA, matrixB);
+                        }
+                        else
+                        {
+                            cout << "The matrices should be of equal dimensions " << endl;
+                        }
+                        break;
+                    }
+                    default:
+                        cout << "Invalid choice. Please try again." << endl;
+                    }
+                }
+
+                if (subChoice == 5)
+                {
+                    break;
+                }
             }
-            case 5:
-                cout << "Exiting..." << endl;
-                return 0;
-            default:
-                cout << "Invalid choice. Please try again." << endl;
+            break;
+        }
+        break;
+        case '5':
+        {
+            // Addition of array of matrices
+            int numMatrices;
+            do
+            {
+                std::cout << "Enter the number of matrices to add (should be 2 or more): ";
+                if (!(std::cin >> numMatrices))
+                {
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    std::cout << "Invalid input. Please enter a valid number (2 or more)." << std::endl;
+                    continue;
+                }
+
+                if (numMatrices < 2)
+                {
+                    std::cout << "Number of matrices should be 1 or more. Please try again." << std::endl;
+                }
+                else
+                {
+                    break;
+                }
+            } while (true);
+            Vector<string> matrixNames;
+            for (int i = 0; i < numMatrices; ++i)
+            {
+                std::string name;
+                std::cout << "Enter the name of matrix " << i + 1 << ": ";
+                std::cin >> name;
+                matrixNames.PushBack(name);
+            }
+
+            // Fetch the matrices from the map
+            Vector<Matrix<double>> matrices;
+            for (size_t i = 0; i < matrixNames.Size(); ++i)
+            {
+                if (getMatrices<double>().find(matrixNames[i]) == getMatrices<double>().end())
+                {
+                    cout << ("Matrix " + matrixNames[i] + " does not exist.");
+                    break;
+                }
+                matrices.PushBack(getMatrices<double>()[matrixNames[i]]);
+            }
+
+            // Check if all matrices have the same dimensions
+            for (size_t i = 1; i < matrices.Size(); ++i)
+            {
+                if (!checkDimensions(matrices[0], matrices[i]))
+                {
+                    cout << ("Matrices have different dimensions.") << endl;
+                    break;
+                }
+            }
+
+            size_t size = matrices.Size();
+
+            if (size > 2)
+            {
+                Matrix<double> result = addMatrices(matrices[0], matrices[1], matrices[size - 1]);
+                static int resultCount = 0;
+                std::string resultName = "Result" + std::to_string(resultCount++);
+                // Store the result matrix in the matrices map
+                getMatrices<double>()[resultName] = result;
+                // Display the resulting matrix
+                displayMatrix(result);
+            }
+            else
+            {
+                addMatrix(matrices[0], matrices[1]);
+            }
+
+            break;
+        }
+        // break;
+        case '6':
+            solveSystemOfLinearEquations();
+            break;
+
+        case '7':
+            cout << "Exiting..." << endl;
+            return 0;
+
+        default:
+            cout << "Invalid choice. Please try again." << std::endl;
         }
     }
     return 0;

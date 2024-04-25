@@ -274,7 +274,102 @@ void Matrix<T>::takeInput()
         }
     }
 }
+template <typename T>
+void displayMatrix(Matrix<T> &matrix)
+{
+    for (int j = 0; j < matrix.cols; ++j)
+    {
+        cout << "+---";
+    }
+    cout << "+" << endl;
 
+    for (int i = 0; i < matrix.rows; ++i)
+    {
+        cout << "| ";
+        for (int j = 0; j < matrix.cols; ++j)
+        {
+            cout << matrix.get(i, j) << " | ";
+        }
+        cout << endl;
+
+        if (i < matrix.rows - 1)
+        {
+            for (int j = 0; j < matrix.cols; ++j)
+            {
+                cout << "+---";
+            }
+            cout << "+" << endl;
+        }
+    }
+
+    for (int j = 0; j < matrix.cols; ++j)
+    {
+        cout << "+---";
+    }
+    cout << "+" << endl;
+}
+
+template <typename T>
+Matrix<T> createMatrix()
+{
+    int rows, cols;
+    string name;
+
+    while (true)
+    {
+        cout << "Rows: ";
+
+        if (!(cin >> rows) || rows <= 0)
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Please enter a positive integer for rows." << endl;
+            continue;
+        }
+
+        cout << "Cols: ";
+
+        if (!(cin >> cols) || cols <= 0)
+        {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input. Please enter a positive integer for columns." << endl;
+            continue;
+        }
+
+        cout << "Enter a name for the matrix: ";
+        cin >> name;
+
+        if (name.empty())
+        {
+            cout << "Matrix name cannot be empty. Please enter a valid name." << endl;
+            continue;
+        }
+
+        if (getMatrices<double>().count(name))
+        {
+            cout << "The name " << name << " is already being used by another matrix, give a new name to the matrix" << endl;
+            continue;
+        }
+
+        if (name == "new")
+        {
+            cout << "The name new is already inavlid, give another name to the matrix" << endl;
+            continue;
+        }
+
+        break;
+    }
+
+    Matrix<T> matrix(rows, cols, name);
+    matrix.takeInput();
+    cout << "The inputted matrix '" << matrix.name << "' is:" << endl;
+    displayMatrix(matrix);
+
+    getMatrices<T>()[matrix.name] = matrix; // Store the matrix in the unordered_map
+
+    return matrix;
+}
 template <typename T>
 Matrix<T> addMatrices(Matrix<T> &matrix)
 {
@@ -493,19 +588,12 @@ pair<Matrix<T>, Matrix<T>> luDecomposition(Matrix<T> &matrix, int n)
 {
 
     // Create matrices for L and U with the same dimensions as the input matrix
-
     Matrix<T> lower(n, n, "lower");
     Matrix<T> upper(n, n, "upper");
 
     // Initialize matrices to zero
-    for (int i = 0; i < n; ++i)
-    {
-        for (int j = 0; j < n; ++j)
-        {
-            lower.set(i, j, 0.0);
-            upper.set(i, j, 0.0);
-        }
-    }
+    initializeToZero(lower);
+    initializeToZero(upper);
 
     // Decomposing matrix into Upper and Lower triangular matrix
     for (int i = 0; i < n; ++i)
@@ -641,13 +729,7 @@ Matrix<T> matrixInverse(Matrix<T> &matrix)
     std::string inverseName = inverseOss.str();
     Matrix<T> inverse(n, n, inverseName);
 
-    for (int i = 0; i < n; ++i)
-    {
-        for (int j = 0; j < n; ++j)
-        {
-            inverse.set(i, j, 0.0);
-        }
-    }
+    initializeToZero(inverse);
 
     // Solve the system of equations L * y = identity for each column of the identity matrix
     // This gives us the columns of the inverse matrix
@@ -858,67 +940,7 @@ void luDecomposition(Matrix<T> &matrix)
     cout << "Upper matrix: " << upper.name << endl;
     displayMatrix(upper);
 }
-template <typename T>
-Matrix<T> createMatrix()
-{
-    int rows, cols;
-    string name;
 
-    while (true)
-    {
-        cout << "Rows: ";
-
-        if (!(cin >> rows) || rows <= 0)
-        {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "Invalid input. Please enter a positive integer for rows." << endl;
-            continue;
-        }
-
-        cout << "Cols: ";
-
-        if (!(cin >> cols) || cols <= 0)
-        {
-            cin.clear();
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            cout << "Invalid input. Please enter a positive integer for columns." << endl;
-            continue;
-        }
-
-        cout << "Enter a name for the matrix: ";
-        cin >> name;
-
-        if (name.empty())
-        {
-            cout << "Matrix name cannot be empty. Please enter a valid name." << endl;
-            continue;
-        }
-
-        if (getMatrices<double>().count(name))
-        {
-            cout << "The name " << name << " is already being used by another matrix, give a new name to the matrix" << endl;
-            continue;
-        }
-
-        if (name == "new")
-        {
-            cout << "The name new is already inavlid, give another name to the matrix" << endl;
-            continue;
-        }
-
-        break;
-    }
-
-    Matrix<T> matrix(rows, cols, name);
-    matrix.takeInput();
-    cout << "The inputted matrix '" << matrix.name << "' is:" << endl;
-    displayMatrix(matrix);
-
-    getMatrices<T>()[matrix.name] = matrix; // Store the matrix in the unordered_map
-
-    return matrix;
-}
 // Binary Operations:
 template <typename T>
 void addMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
@@ -944,7 +966,6 @@ void addMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
     cout << "Result matrix: " << result.name << endl;
     displayMatrix(result);
 }
-
 template <typename T>
 void subMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
 {
@@ -1024,41 +1045,6 @@ void mulMatrix(Matrix<T> &matrix_A, Matrix<T> &matrix_B)
     // Display result matrix
     cout << "Result matrix: " << result.name << endl;
     displayMatrix(result);
-}
-
-template <typename T>
-void displayMatrix(Matrix<T> &matrix)
-{
-    for (int j = 0; j < matrix.cols; ++j)
-    {
-        cout << "+---";
-    }
-    cout << "+" << endl;
-
-    for (int i = 0; i < matrix.rows; ++i)
-    {
-        cout << "| ";
-        for (int j = 0; j < matrix.cols; ++j)
-        {
-            cout << matrix.get(i, j) << " | ";
-        }
-        cout << endl;
-
-        if (i < matrix.rows - 1)
-        {
-            for (int j = 0; j < matrix.cols; ++j)
-            {
-                cout << "+---";
-            }
-            cout << "+" << endl;
-        }
-    }
-
-    for (int j = 0; j < matrix.cols; ++j)
-    {
-        cout << "+---";
-    }
-    cout << "+" << endl;
 }
 
 void printMatrixfromMatrices(string matrixName)
@@ -1537,7 +1523,7 @@ int main()
                     {
                     case 1:
                     {
-                        if (matrixA.rows == matrixB.rows && matrixA.cols == matrixB.cols)
+                        if (checkDimensions(matrixA, matrixB))
                         {
                             addMatrix(matrixA, matrixB);
                         }
@@ -1551,7 +1537,7 @@ int main()
 
                     case 2:
                     {
-                        if (matrixA.rows == matrixB.rows && matrixA.cols == matrixB.cols)
+                        if (checkDimensions(matrixA, matrixB))
                         {
                             subMatrix(matrixA, matrixB);
                         }
@@ -1576,7 +1562,7 @@ int main()
                     }
                     case 4:
                     {
-                        if (matrixA.rows == matrixB.rows && matrixA.cols == matrixB.cols)
+                        if (checkDimensions(matrixA, matrixB))
                         {
                             emMulMatrix(matrixA, matrixB);
                         }
@@ -1633,32 +1619,36 @@ int main()
             }
 
             // Fetch the matrices from the map
-            Vector<Matrix<double>> matrices;
+            Vector<Matrix<double>> Tmatrices;
             for (size_t i = 0; i < matrixNames.Size(); ++i)
             {
                 if (getMatrices<double>().find(matrixNames[i]) == getMatrices<double>().end())
                 {
                     cout << ("Matrix " + matrixNames[i] + " does not exist.");
-                    break;
+                    continue;;
                 }
-                matrices.PushBack(getMatrices<double>()[matrixNames[i]]);
+                Tmatrices.PushBack(getMatrices<double>()[matrixNames[i]]);
             }
-
+            int x = 0;
             // Check if all matrices have the same dimensions
-            for (size_t i = 1; i < matrices.Size(); ++i)
+            for (size_t i = 1; i < Tmatrices.Size(); ++i)
             {
-                if (!checkDimensions(matrices[0], matrices[i]))
+                if (!checkDimensions(Tmatrices[0], Tmatrices[i]))
                 {
                     cout << ("Matrices have different dimensions.") << endl;
+                    x = 1;
                     break;
                 }
             }
-
-            size_t size = matrices.Size();
+            if (x==1)
+            {
+                break;
+            }
+            size_t size = Tmatrices.Size();
 
             if (size > 2)
             {
-                Matrix<double> result = addMatrices(matrices[0], matrices[1], matrices[size - 1]);
+                Matrix<double> result = addMatrices(Tmatrices[0], Tmatrices[1], Tmatrices[size - 1]);
                 static int resultCount = 0;
                 std::string resultName = "Result" + std::to_string(resultCount++);
                 // Store the result matrix in the matrices map
@@ -1668,7 +1658,14 @@ int main()
             }
             else
             {
-                addMatrix(matrices[0], matrices[1]);
+                if(size==2)
+                {
+                    addMatrix(Tmatrices[0], Tmatrices[1]);
+                }
+                else
+                {
+                    cout<<"The number of valid inputs are less than 2"<<endl;
+                }
             }
 
             break;
@@ -1688,4 +1685,3 @@ int main()
     }
     return 0;
 }
-

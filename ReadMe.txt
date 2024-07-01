@@ -1,34 +1,52 @@
+Certainly. I'll reformat the README to make it more professional-looking using Markdown formatting. Here's an improved version:
 
+```markdown
 # Matrix Manipulation Library in C++
+
+## Table of Contents
+1. [Overview](#overview)
+2. [Features](#features)
+3. [Getting Started](#getting-started)
+   - [Prerequisites](#prerequisites)
+   - [Installation](#installation)
+4. [Usage](#usage)
+   - [Creating a Matrix](#creating-a-matrix)
+   - [Performing Operations](#performing-operations)
+   - [CLI Menu](#cli-menu)
+5. [Code Examples](#code-examples)
+6. [Error Handling](#error-handling)
+7. [Contributing](#contributing)
+8. [License](#license)
 
 ## Overview
 
-This Matrix Manipulation Library provides a comprehensive set of functions for creating, displaying, and manipulating matrices in C++. The library supports various operations such as arithmetic, LU decomposition, determinant calculation, inversion, trace, transpose, and eigenvalue/eigenvector computations. It includes robust error handling and a user-friendly command-line interface for interactive use.
+The Matrix Manipulation Library is a robust C++ toolkit designed for efficient creation, display, and manipulation of matrices. It offers a wide range of operations from basic arithmetic to advanced computations like LU decomposition and eigenvalue calculation. With its user-friendly command-line interface and comprehensive error handling, this library is suitable for both educational purposes and professional applications.
 
 ## Features
 
-- **Matrix Creation**: Easily create matrices of any numeric type (int, double, etc.) with specified dimensions and names.
-- **Matrix Display**: Print matrices to the console for easy visualization.
-- **Arithmetic Operations**: Perform addition, subtraction, multiplication, and element-wise multiplication.
-- **Advanced Operations**:
-  - LU Decomposition
-  - Determinant Calculation
-  - Inverse Calculation
-  - Trace
-  - Transpose
-  - Rank
-  - Eigenvalues and Eigenvectors
-- **Error Handling**: Comprehensive error messages for invalid operations (e.g., non-square matrices for certain operations).
-- **Interactive CLI**: User-friendly command-line interface to perform matrix operations interactively.
+- **Flexible Matrix Creation:** Support for various numeric types (int, double, etc.)
+- **Visualization:** Easy-to-use console display functionality
+- **Comprehensive Operations:**
+  - Basic Arithmetic: Addition, Subtraction, Multiplication
+  - Advanced Computations:
+    - LU Decomposition
+    - Determinant Calculation
+    - Matrix Inversion
+    - Trace and Transpose
+    - Rank Determination
+    - Eigenvalue and Eigenvector Computation
+- **Robust Error Handling:** Detailed error messages for invalid operations
+- **Interactive CLI:** User-friendly command-line interface for real-time matrix manipulation
 
 ## Getting Started
 
 ### Prerequisites
 
-- C++ Compiler (e.g., GCC)
-- Standard Template Library (STL)
+- C++ Compiler (GCC 7.0+ recommended)
+- CMake (version 3.10+)
+- Git (for cloning the repository)
 
-### Building the Library
+### Installation
 
 1. Clone the repository:
    ```bash
@@ -36,9 +54,11 @@ This Matrix Manipulation Library provides a comprehensive set of functions for c
    cd matrix-manipulation-library
    ```
 
-2. Compile the code:
+2. Build the project:
    ```bash
-   g++ -o matrix_library main.cpp matrix.cpp
+   mkdir build && cd build
+   cmake ..
+   make
    ```
 
 3. Run the executable:
@@ -50,19 +70,21 @@ This Matrix Manipulation Library provides a comprehensive set of functions for c
 
 ### Creating a Matrix
 
-To create a new matrix, follow the prompts in the command-line interface. You will be asked to specify the number of rows, columns, and the name of the matrix.
+Follow the CLI prompts to create a new matrix:
+1. Enter the number of rows
+2. Enter the number of columns
+3. Provide a name for the matrix
+4. Input the matrix elements
 
 ### Performing Operations
 
-The CLI will guide you through various operations you can perform on the matrices:
+The CLI offers two types of operations:
+1. **Unary Operations:** Actions on a single matrix (e.g., transpose, trace)
+2. **Binary Operations:** Actions involving two matrices (e.g., addition, multiplication)
 
-1. **Unary Operations**: Operations on a single matrix, such as transpose, trace, LU decomposition, etc.
-2. **Binary Operations**: Operations involving two matrices, such as addition, subtraction, and multiplication.
-3. **Matrix Print**: Display a stored matrix.
+### CLI Menu
 
-### Example CLI Menu
-
-```plaintext
+```
 1. Create a new matrix
 2. Print a stored matrix
 3. Unary Matrix Operations
@@ -71,7 +93,7 @@ The CLI will guide you through various operations you can perform on the matrice
 6. Exit
 ```
 
-## Example Code
+## Code Examples
 
 ### Matrix Creation
 
@@ -98,8 +120,4 @@ auto [L, U] = luDecomposition(matrixA);
 
 ## Error Handling
 
-The library includes extensive error handling to ensure invalid operations are not performed. For example, attempting to calculate the determinant of a non-square matrix will result in an appropriate error message.
-
----
-
-Enjoy using the Matrix Manipulation Library!
+The library implements thorough error checking to prevent invalid operations. For instance, attempting to calculate the determinant of a non-square matrix will trigger an appropriate error message.

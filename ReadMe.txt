@@ -1,5 +1,3 @@
-Here’s your **README section rewritten fully in Markdown**, ready to drop into your repository:
-
 ````markdown
 # Matrix Manipulation Library in C++
 
@@ -124,8 +122,3 @@ For example:
 Such operations will result in descriptive error messages, ensuring safe and reliable matrix manipulations.
 
 ---
-
-```
-
-Would you like me to add a short **license** and **contribution** section (MIT-style) so it’s immediately publish-ready on GitHub?
-```
